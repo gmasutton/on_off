@@ -1,0 +1,101 @@
+---
+title: "Number of Cycles Wrangle"
+output: pdf_document
+date: "2024-02-09"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Load Packages
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(Lab.Data.Prep)
+```
+
+#Load Data
+
+```{r}
+raw<-Lab.Data.Prep::extract("NC",c(1:60),filepath = '/Users/admin/Documents/Grant_Renewal/raw/')
+
+```
+
+#Load Functions
+
+```{r}
+mpc_b<-function(x, array) {
+  # parsing text array into a data frame
+  if (stringr::str_detect(array, "[:upper:]") == FALSE) {
+    array <- toupper(array)
+  }
+
+  startarray <- paste(array, ":", sep = "")
+  endarray <- paste(LETTERS[which(LETTERS == array) + 1L], ":", sep = "")
+  new_vec <- vector("list", length(x))
+for (c in seq_along(x)) {
+    text_data <- data.frame()
+    text_data <- rbind(text_data, x[[c]])
+
+    suppressWarnings(split_data <- tidyr::separate(text_data,
+      col = 1,
+      into = c(
+        "Col1", "Col2", "Col3", "Col4", "Col5",
+        "Col6", "Col7"
+      ),
+      sep = " +"
+    ))
+    id <- split_data[3, 2]
+    start_row <- which(split_data$Col1 == startarray)
+    end_row <- which(split_data$Col1 == endarray)
+    filtered_data <- dplyr::filter(
+      split_data,
+      dplyr::row_number() %in% (start_row + 1):(end_row - 1)
+    )
+    wide_data <- data.frame()
+    col_index <- 1
+    for (i in seq_len(nrow(filtered_data))) {
+      for (j in 3:7) {
+        wide_data[1, col_index] <- filtered_data[i, j]
+        col_index <- col_index + 1
+      }
+    }
+   wide_data<-wide_data[ , colSums(is.na(wide_data))==0]
+   wide_data<-wide_data %>% dplyr::mutate_if(is.character,as.numeric)
+
+    colnames(wide_data) <- paste(array,c(0:(ncol(wide_data)-1)), sep = "")
+    new_vec[[c]] <- wide_data
+  }
+
+  # merge data frames from list into one data frame
+  merged_df <- do.call(rbind, Map(cbind, session = seq_along(new_vec), new_vec))
+  merged_df$id <- id
+  #reorder columns so id is visible
+  merged_df<-merged_df[,c(ncol(merged_df),1:ncol(merged_df)-1)]
+  return(merged_df)
+}
+```
+
+#Generate Data Frames
+```{r}
+raw_b<-list()
+for (i in 1:length(baseline_raw)) {
+  baseline_raw_b[[i]]<-mpc_b(baseline_raw[[i]],"b")
+  print(i)
+}
+df<-do.call("rbind", raw_b)
+df<-baseline[,c()]
+colnames(df)[which(names(df) == 'B0')]<-"session_time"
+colnames(df)[which(names(df) == 'B3')]<-"target"
+colnames(df)[which(names(df) == 'B12')]<-"alt"
+colnames(df)[which(names(df) == 'B8')]<-"foods"
+df$session_time<-df$session_time/6000
+df$target_rate<-df$target/df$session_time
+df$alt_rate<-df$alt/df$session_time
+df$food_rate<-df$foods/df$session_time
+
+```
+
+
