@@ -131,6 +131,11 @@ df$phase_session[(df$group == "ao2"|df$group =="cd2")&(df$session>32 & df$sessio
 df$phase_session[(df$group == "ao4"|df$group =="cd4")&(df$session>32 & df$session < 40)]<-1:7
 df$phase_session[(df$group == "ao8"|df$group =="cd8")&(df$session>32 & df$session < 48)]<-1:15
 df$phase_session[is.na(df$phase_session == TRUE)]<-1:11
+
+df<-df %>% dplyr::select(id,group,phase,session,phase_session,target_rate,alt_rate,food_rate)
+
+save(df,
+     file = "/Users/admin/Documents/Grant_Renewal/full_data.RData")
 ```
 
 
