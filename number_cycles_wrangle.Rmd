@@ -81,21 +81,56 @@ for (c in seq_along(x)) {
 #Generate Data Frames
 ```{r}
 raw_b<-list()
-for (i in 1:length(baseline_raw)) {
-  baseline_raw_b[[i]]<-mpc_b(baseline_raw[[i]],"b")
+for (i in 1:length(raw)) {
+  raw_b[[i]]<-mpc_b(raw[[i]],"b")
   print(i)
 }
 df<-do.call("rbind", raw_b)
-df<-baseline[,c()]
 colnames(df)[which(names(df) == 'B0')]<-"session_time"
 colnames(df)[which(names(df) == 'B3')]<-"target"
 colnames(df)[which(names(df) == 'B12')]<-"alt"
 colnames(df)[which(names(df) == 'B8')]<-"foods"
 df$session_time<-df$session_time/6000
+df<-df %>% dplyr::select(id, session, target,alt,foods,session_time)
 df$target_rate<-df$target/df$session_time
 df$alt_rate<-df$alt/df$session_time
 df$food_rate<-df$foods/df$session_time
 
+
+# Define the groups and their corresponding IDs
+groups <- list(
+  ao2 = c(8, 17, 20, 28, 34, 39, 44, 48, 49),
+  cd2 = c(3, 4, 30, 36, 45, 54, 56, 59, 60),
+  ao4 = c(7, 11, 13, 16, 22, 25, 32, 41, 51),
+  cd4 = c(12, 15, 21, 23, 33, 35, 38, 52, 57),
+  ao8 = c(2, 5, 9, 29, 40, 42, 43, 53, 55),
+  cd8 = c(1, 6, 10, 19, 24, 26, 37, 47, 50)
+)
+
+
+# Create a vector of all group IDs
+all_group_ids <- unlist(groups)
+# Create a vector of corresponding group names for all IDs
+group_names <- rep(names(groups), each = length(groups[[1]]))
+# Match the IDs in quality_all$id to the all_group_ids vector
+match_indices <- match(df$id, paste("NC", all_group_ids, sep = ""))
+# Assign group names using ifelse and logical indexing
+df$group <- ifelse(!is.na(match_indices), group_names[match_indices], NA)
+#remove dropped subjects
+df<-df %>% filter(is.na(group)==FALSE)
+
+df$phase[df$session<33]<-1
+df$phase[(df$group == "ao2"|df$group =="cd2")&(df$session>32 & df$session < 36)]<-2
+df$phase[(df$group == "ao4"|df$group =="cd4")&(df$session>32 & df$session < 40)]<-2
+df$phase[(df$group == "ao8"|df$group =="cd8")&(df$session>32 & df$session < 48)]<-2
+df$phase[is.na(df$phase == TRUE)]<-3
+
+
+df$phase_session[df$session<33]<-df$session[df$session<33]
+df$phase_session[(df$group == "ao2"|df$group =="cd2")&(df$session>32 & df$session < 36)]<-1:3
+df$phase_session[(df$group == "ao4"|df$group =="cd4")&(df$session>32 & df$session < 40)]<-1:7
+df$phase_session[(df$group == "ao8"|df$group =="cd8")&(df$session>32 & df$session < 48)]<-1:15
+df$phase_session[is.na(df$phase_session == TRUE)]<-1:11
 ```
 
 
